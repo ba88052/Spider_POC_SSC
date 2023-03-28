@@ -1,6 +1,7 @@
 import re
 import sys
 import json
+import time
 import scrapy
 import random
 import logging
@@ -69,11 +70,13 @@ class CompanyFinanceSpider(scrapy.Spider):
                     try:
                         self.wait_until_done()
                         self.go_to_page(page)
-                        self.driver.implicitly_wait(5)
+                        time.sleep(10)
                         self.wait.until(EC.visibility_of_element_located((By.CLASS_NAME, 'xgl')))
                         report_links = self.driver.find_elements(By.CLASS_NAME, 'xgl')
                         report_name = report_links[link].text
                         report_links[link].click()
+                        self.wait_until_done()
+                        self.driver.implicitly_wait(10)
                         #儲存公司名稱                       
                         company_name, company_MDN = self.get_company_name_MDN()
                         if company_name == None:
@@ -85,9 +88,9 @@ class CompanyFinanceSpider(scrapy.Spider):
                         yield self.SPIDER_POC_SSC_FINANCE_INFO_ITEM
                         break
                     except:
-                        retry_count =+ 1
+                        retry_count += 1
                         logging.warning(f"Error occurred: Search Wrong Retry Times#{retry_count}")
-                        self.driver.back()
+                        self.driver.get("https://congbothongtin.ssc.gov.vn/faces/NewsSearch")
                         self.driver.implicitly_wait(2)
                         continue      
                 if retry_count == max_retries:

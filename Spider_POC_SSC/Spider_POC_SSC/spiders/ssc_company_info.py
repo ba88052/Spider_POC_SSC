@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import json
+import time
 import scrapy
 import random
 import logging
@@ -79,7 +80,8 @@ class CompanyInfoSpider(scrapy.Spider):
             for link in tqdm(range(20), position = 0):
                 self.wait_until_done()
                 self.go_to_page(page)
-                self.driver.implicitly_wait(2)
+                self.wait_until_done()
+                time.sleep(10)
                 retry_count = 0
                 max_retries = 5
                 while retry_count < max_retries:
