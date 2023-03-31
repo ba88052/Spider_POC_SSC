@@ -1,0 +1,23 @@
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo dpkg -i google-chrome-stable_current_amd64.deb
+
+sudo apt-get install -f
+
+sudo apt-get update
+sudo apt-get install -y libxss1 libappindicator1 libindicator7
+sudo apt-get install -y libasound2 libnspr4 libnss3 libx11-xcb1 libxkbcommon0 libxss1 libxtst6 xdg-utils
+
+
+wget https://chromedriver.storage.googleapis.com/111.0.5563.64/chromedriver_linux64.zip
+
+unzip chromedriver_linux64.zip
+
+sudo mv chromedriver /usr/local/bin/
+
+sudo apt-get update
+sudo apt-get install -y libglib2.0-0 libnss3 libgconf-2-4 libfontconfig1
+
+wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+sudo apt-get update
+sudo apt-get install google-chrome-stable

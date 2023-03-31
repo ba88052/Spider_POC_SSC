@@ -12,7 +12,6 @@ import logging
 
 
 class BigQueryPipeline:
-
     def __init__(self, project_id, dataset_id, table_id):
         self.project_id = project_id
         self.dataset_id = dataset_id
@@ -28,7 +27,6 @@ class BigQueryPipeline:
 
     def open_spider(self, spider):
         self.client = bigquery.Client(project=self.project_id)
-
         # Create dataset if not exists
         dataset_ref = self.client.dataset(self.dataset_id)
         try:
@@ -36,7 +34,7 @@ class BigQueryPipeline:
             self.client.create_dataset(dataset)
             logging.info(f"Create dataset {dataset_ref}")
         except Exception as e:
-            self.client.get_dataset(dataset_ref)  
+            self.client.get_dataset(dataset_ref)
             logging.info(f"Dataset {dataset_ref} already exist")
 
         # Create table if not exists
@@ -75,12 +73,12 @@ class BigQueryPipeline:
             except Exception as e:
                 time.sleep(5)
                 logging.info(f"Table {self.table_ref} already exist")
-                
+
     def process_item(self, item, spider):
         item_data = dict(item)
         errors = self.client.insert_rows_json(self.table_ref, [item_data])
         if errors:
-            logging.error(f"Errors while streaming data to BigQuery: {errors}")
+            raise Exception(f"Errors while streaming data to BigQuery: {errors}")
 
         return item
 

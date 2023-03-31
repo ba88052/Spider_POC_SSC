@@ -65,7 +65,7 @@ class CompanyInfoSpider(scrapy.Spider):
         self.driver.get("https://congbothongtin.ssc.gov.vn/faces/CompanyProfilesSearch")
         if self.max_page < 1 :
             self.max_page = self.wait.until(EC.visibility_of_element_located((By.XPATH,'//*[@id="pt2:resId1::nb_cnt"]/tbody/tr/td[3]'))).text
-            self.max_page = int(re.findall('\d+', self.max_page))
+            self.max_page = int(re.findall('\d+', self.max_page)[0])
         if self.first_page == 0:
             self.first_page = self.max_page
         logging.info(f"First page:{self.first_page}, Max page:{self.max_page}")
@@ -89,10 +89,11 @@ class CompanyInfoSpider(scrapy.Spider):
                     try:
                         company_name = company_links[link].text
                         company_links[link].click()
+                        logging.info(f"Click Link page:{page}, link: {link}")
                         company_MDN = self.wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="plam2"]/td[2]/span'))).text
                         break
                     except:
-                        retry_count =+ 1
+                        retry_count += 1
                         logging.warning(f"Error occurred: Search Wrong Retry Times#{retry_count}")
                         continue
                     
@@ -105,12 +106,14 @@ class CompanyInfoSpider(scrapy.Spider):
                 SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_NAME"] = str(company_name)
                 
                 # 下載第一頁資料
+                logging.info(f"Get First Data page:{page}, link: {link}")
                 SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_GENERAL_INFO"] = str(self.get_first_data(company_name))
                 # SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_GENERAL_INFO"] = str(1)
 
                 # print("First page")
                 
                 # 下載第二頁資料
+                logging.info(f"Get Second Data page:{page}, link: {link}")
                 SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_NNB_NNQ_SHAREHOLDERS_DATA"] = str(self.get_second_data())
                 # SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_NNB_NNQ_SHAREHOLDERS_DATA"] = str(2)
                 # print("Second page")
