@@ -22,11 +22,13 @@ from selenium.webdriver.support import expected_conditions as EC
 today = datetime.today().date()
 today = today.strftime("%m%d")
 
+#有狀況
+
 class CompanyInfoSpider(scrapy.Spider):
     name = "ssc_company_info"
     bq_table_name = f'company_info_{today}'
     #---------------設定Selenium----------------#
-    def __init__(self, first_page = 1, max_page = 0, *args, **kwargs):
+    def __init__(self, first_page = 31, max_page = 0, *args, **kwargs):
         #設定參數
         super(CompanyInfoSpider, self).__init__(*args, **kwargs)
         self.first_page = int(first_page)
@@ -78,46 +80,54 @@ class CompanyInfoSpider(scrapy.Spider):
         SPIDE_RPOC_SSC_COMPANY_INFO_ITEM =  SpiderPocSscCompanyInfoItem()
         for page in tqdm(range(self.first_page, self.max_page+1), position = 1):
             for link in tqdm(range(20), position = 0):
-                self.wait_until_done()
-                self.go_to_page(page)
-                self.wait_until_done()
-                time.sleep(10)
                 retry_count = 0
-                max_retries = 5
+                max_retries = 20
                 while retry_count < max_retries:
-                    company_links = self.driver.find_elements(By.CLASS_NAME, 'xgl')
                     try:
+                        self.wait_until_done()
+                        self.go_to_page(page)
+                        self.wait_until_done()
+                        time.sleep(10)
+                        company_links = self.driver.find_elements(By.CLASS_NAME, 'xgl')
                         company_name = company_links[link].text
                         company_links[link].click()
                         logging.info(f"Click Link page:{page}, link: {link}")
                         company_MDN = self.wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="plam2"]/td[2]/span'))).text
-                        break
                     except:
                         retry_count += 1
                         logging.warning(f"Error occurred: Search Wrong Retry Times#{retry_count}")
                         continue
+
+                    try:
+                        SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_MDN"] = str(company_MDN)
+                        SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_NAME"] = str(company_name)
+
+                        # 下載第一頁資料
+                        logging.info(f"Get First Data page:{page}, link: {link}")
+                        SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_GENERAL_INFO"] = str(self.get_first_data(company_name))
+                        # SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_GENERAL_INFO"] = str(1)
+
+                        # print("First page")
+
+                        # 下載第二頁資料
+                        logging.info(f"Get Second Data page:{page}, link: {link}")
+                        SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_NNB_NNQ_SHAREHOLDERS_DATA"] = str(self.get_second_data())
+                        # SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_NNB_NNQ_SHAREHOLDERS_DATA"] = str(2)
+                        # print("Second page")
+                        self.driver.back()
+                        break
+                    except:
+                        self.driver.back()
+                        logging.warning(f"Error occurred: Get Page Wrong Retry Times#{retry_count}")
+                        retry_count += 1
+                        continue
+                        
                     
                 if retry_count == max_retries:
-                    logging.error(f"Error occurred: Retry Enough Times")
-                    self.driver.quit()
-                    sys.exit()
+                    logging.error(f"Error occurred: Retry Enough Times  page:{page}, link: {link}")
+                    continue
                     # print(company_MDN, company_name)
-                SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_MDN"] = str(company_MDN)
-                SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_NAME"] = str(company_name)
-                
-                # 下載第一頁資料
-                logging.info(f"Get First Data page:{page}, link: {link}")
-                SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_GENERAL_INFO"] = str(self.get_first_data(company_name))
-                # SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_GENERAL_INFO"] = str(1)
-
-                # print("First page")
-                
-                # 下載第二頁資料
-                logging.info(f"Get Second Data page:{page}, link: {link}")
-                SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_NNB_NNQ_SHAREHOLDERS_DATA"] = str(self.get_second_data())
-                # SPIDE_RPOC_SSC_COMPANY_INFO_ITEM["COMPANY_NNB_NNQ_SHAREHOLDERS_DATA"] = str(2)
-                # print("Second page")
-                self.driver.back()
+                        
 
                 yield SPIDE_RPOC_SSC_COMPANY_INFO_ITEM
         self.driver.quit()

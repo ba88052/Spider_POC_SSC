@@ -62,6 +62,7 @@ class BigQueryPipeline:
                     bigquery.SchemaField("COMPANY_NAME", "STRING", mode="NULLABLE"),
                     bigquery.SchemaField("COMPANY_MDN", "STRING", mode="NULLABLE"),
                     bigquery.SchemaField("REPORT_NAME", "STRING", mode="NULLABLE"),
+                    bigquery.SchemaField("REPORT_PUBLISHED_TIME", "STRING", mode="NULLABLE"),
                     bigquery.SchemaField("REPORT_BCDKT", "STRING", mode="NULLABLE"),
                     bigquery.SchemaField("REPORT_KQKD", "STRING", mode="NULLABLE"),
                     bigquery.SchemaField("REPORT_LCTT_TT", "STRING", mode="NULLABLE"),

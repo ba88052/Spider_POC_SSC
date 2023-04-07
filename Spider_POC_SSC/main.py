@@ -74,7 +74,7 @@ if __name__ == '__main__':
     elif mode == 1:
         if max_page == 0:
             max_page = get_max_page_company_finance()
-        for page_ranges in generate_page_ranges(first_page, max_page, 3):
+        for page_ranges in generate_page_ranges(first_page, max_page, 10):
             commands.append(['scrapy', 'crawl', 'ssc_company_finance', '-a', f'first_page={page_ranges[0]}', '-a', f'max_page={page_ranges[1]}'])
 #---------------啟動多執行緒---------------#
     for command in commands:

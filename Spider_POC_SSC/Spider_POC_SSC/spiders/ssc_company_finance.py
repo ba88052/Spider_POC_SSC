@@ -37,7 +37,7 @@ class CompanyFinanceSpider(scrapy.Spider):
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument("--safebrowsing-disable-download-protection")
-        options.add_argument('--headless')
+        # options.add_argument('--headless')
         self.driver = webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=options)
         self.wait = WebDriverWait(self.driver, 60)
 
@@ -52,13 +52,13 @@ class CompanyFinanceSpider(scrapy.Spider):
         self.driver.get("https://congbothongtin.ssc.gov.vn/faces/NewsSearch")
         if self.max_page < 1 :
             self.max_page = self.wait.until(EC.visibility_of_element_located((By.XPATH,'//*[@id="pt9:t1::nb_cnt"]/tbody/tr/td[3]'))).text
-            self.max_page = int(re.findall('\d+', self.max_page))
+            self.max_page = int(re.findall('\d+', self.max_page)[0])
         if self.first_page == 0:
             self.first_page = self.max_page
         logging.info(f"First page:{self.first_page}, Max page:{self.max_page}")
         yield scrapy.Request(url="https://www.google.com.tw", callback=self.get_company_finance_data)
         
-    #---------------Selenium進入頁面後的調整----------------#
+    #---------------Selenium進入頁面後的動作----------------#
     def get_company_finance_data(self, response):
         self.SPIDER_POC_SSC_FINANCE_INFO_ITEM =  SpiderPocSscFinanceInfoItem()
         #用來儲存回傳資料
@@ -74,6 +74,13 @@ class CompanyFinanceSpider(scrapy.Spider):
                         self.wait.until(EC.visibility_of_element_located((By.CLASS_NAME, 'xgl')))
                         report_links = self.driver.find_elements(By.CLASS_NAME, 'xgl')
                         report_name = report_links[link].text
+                        print(report_name)
+                        report_published_time = self.driver.find_elements(By.CLASS_NAME, 'x221')
+                        report_published_time = report_published_time[range(4, 90, 6)[link]].text
+                        print(report_published_time)
+                        report_published_time = datetime.strptime(report_published_time, '%d/%m/%Y %H:%M:%S')
+                        report_published_time = report_published_time.strftime('%Y/%m/%d')
+                        print(report_published_time)
                         report_links[link].click()
                         self.wait_until_done()
                         self.driver.implicitly_wait(10)
@@ -84,10 +91,14 @@ class CompanyFinanceSpider(scrapy.Spider):
                         #儲存年份與季度(如果季度不存在則為0，表示為半年或年報
                         year, quarter = self.get_year_quarter()
                         #抓取報表資料
-                        self.get_report_data(year=year, quarter=quarter, report_name = report_name, company_name=company_name, company_MDN=company_MDN)
+                        report_name = f"{year}_{quarter}_{report_name}"
+                        self.SPIDER_POC_SSC_FINANCE_INFO_ITEM['REPORT_NAME'] = report_name
+                        self.SPIDER_POC_SSC_FINANCE_INFO_ITEM["REPORT_PUBLISHED_TIME"] = report_published_time
+                        self.get_report_table(company_name=company_name, company_MDN=company_MDN)
                         yield self.SPIDER_POC_SSC_FINANCE_INFO_ITEM
                         break
-                    except:
+                    except Exception as e:
+                        print(e)
                         retry_count += 1
                         logging.warning(f"Error occurred: Search Wrong Retry Times#{retry_count}")
                         self.driver.get("https://congbothongtin.ssc.gov.vn/faces/NewsSearch")
@@ -95,8 +106,8 @@ class CompanyFinanceSpider(scrapy.Spider):
                         continue      
                 if retry_count == max_retries:
                     logging.error(f"Error occurred: Retry Enough Times")
-                    self.driver.quit()
-                    sys.exit()
+                    # self.driver.quit()
+                    # sys.exit()
                 self.driver.back()
         self.driver.quit()        
     
@@ -104,7 +115,7 @@ class CompanyFinanceSpider(scrapy.Spider):
     def wait_until_done(self):
         self.wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
 
-    #---------------進入指定頁面----------------#
+    #---------------進入指定頁數----------------#
     def go_to_page(self, page):
         target_page_element = self.wait.until(EC.visibility_of_element_located((By.ID,"pt9:t1::nb_in_pg")))
         page_column = target_page_element.get_attribute("value")
@@ -131,7 +142,7 @@ class CompanyFinanceSpider(scrapy.Spider):
         self.SPIDER_POC_SSC_FINANCE_INFO_ITEM['COMPANY_MDN'] = str(company_MDN)
         return(company_name, company_MDN)
 
-    #---------------拿到Year和Quarter----------------#
+    #---------------拿到 Year和 Quarter----------------#
     def get_year_quarter(self):
         year_quarter = self.driver.find_elements(By.CLASS_NAME, "xer")
         year_quarter_li = []
@@ -146,10 +157,8 @@ class CompanyFinanceSpider(scrapy.Spider):
             quarter = ""
         return(year, quarter)
     
-    #---------------拿到所有report data----------------#
-    def get_report_data(self, year, quarter, report_name, company_name, company_MDN):
-        report_name = f"{year}_{quarter}_{report_name}"
-        self.SPIDER_POC_SSC_FINANCE_INFO_ITEM['REPORT_NAME'] = report_name
+    #---------------拿到所有 Report Table----------------#
+    def get_report_table(self, company_name, company_MDN):
         table_names = ["REPORT_BCDKT", "REPORT_KQKD", "REPORT_LCTT_TT", "REPORT_LCTT_GT"]
         for tab_num, table_name in zip(range(1, 5), table_names):
             table_link = self.wait.until(EC.element_to_be_clickable((By.ID, f'pt2:tab{tab_num}::disAcr')))
